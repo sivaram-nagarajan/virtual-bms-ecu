@@ -1,0 +1,1 @@
+# Project-wide MISRA C:2012 deviations. Each one is justified in docs/misra.md.

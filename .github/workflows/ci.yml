@@ -1,0 +1,120 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-test:
+    name: Build and unit test (${{ matrix.compiler }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc, clang]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tools
+        run: sudo apt-get update && sudo apt-get install -y libgtest-dev ninja-build
+      - name: Configure
+        run: |
+          if [ "${{ matrix.compiler }}" = "clang" ]; then export CC=clang CXX=clang++; fi
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+      - name: Build
+        run: cmake --build build
+      - name: Test
+        run: ctest --test-dir build --output-on-failure --output-junit test-results.xml
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.compiler }}
+          path: build/test-results.xml
+
+  static-analysis:
+    name: Static analysis (MISRA C, clang-tidy)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tools
+        run: sudo apt-get update && sudo apt-get install -y libgtest-dev cppcheck clang-tidy
+      - name: Configure (for compile_commands.json)
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+      - name: Run analysis
+        run: tools/static_analysis.sh build
+
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tools
+        run: sudo apt-get update && sudo apt-get install -y libgtest-dev gcovr
+      - name: Build with coverage
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBMS_COVERAGE=ON
+          cmake --build build
+          ctest --test-dir build
+      - name: Report
+        run: |
+          gcovr -r . --filter src/ --filter include/ --exclude-unreachable-branches \
+            --exclude-throw-branches --fail-under-line 90 \
+            --exclude 'src/platform/can_socketcan.c' --exclude 'src/platform/os_linux.c' \
+            --exclude 'src/ecu/main.c' --txt --html-details build/coverage.html
+          gcovr -r . --filter src/ --filter include/ --markdown-summary >> "$GITHUB_STEP_SUMMARY" || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: build/coverage*.html
+
+  vcan-smoke:
+    name: Smoke test on vcan
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tools
+        run: |
+          sudo apt-get update && sudo apt-get install -y can-utils
+          # vcan ships in linux-modules-extra on some runner kernels; it is not
+          # packaged for every kernel, so only install it when it exists.
+          sudo apt-get install -y "linux-modules-extra-$(uname -r)" || echo "no modules-extra package for $(uname -r)"
+      - name: Build
+        run: cmake -S . -B build -DBMS_BUILD_TESTS=OFF && cmake --build build
+      - name: Set up vcan0
+        run: |
+          sudo modprobe vcan
+          sudo ip link add dev vcan0 type vcan
+          sudo ip link set up vcan0
+      - name: Run ECU, send frames, check it routed them
+        run: |
+          ./build/bms_ecu -i vcan0 > ecu.log &
+          ECU_PID=$!
+          sleep 1
+          for i in $(seq 1 10); do
+            cansend vcan0 200#A00FA00FA00FA00F
+            cansend vcan0 555#00
+            sleep 0.05
+          done
+          sleep 0.5
+          kill -INT "$ECU_PID"
+          wait "$ECU_PID"
+          cat ecu.log
+          grep -q "rx routed 10, unknown id 10" ecu.log
+
+  traceability:
+    name: Requirement traceability
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check every requirement is verified
+        run: python3 tools/trace.py --output build/traceability.md
+      - name: Publish matrix
+        if: always()
+        run: cat build/traceability.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: traceability-matrix
+          path: build/traceability.md
