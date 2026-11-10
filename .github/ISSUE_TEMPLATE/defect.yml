@@ -1,0 +1,24 @@
+name: Defect
+description: Something does not behave as required
+labels: [defect]
+body:
+  - type: input
+    id: req_id
+    attributes:
+      label: Affected requirement(s)
+      placeholder: REQ-XXX-000
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed vs. expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options: [Critical, Major, Minor]

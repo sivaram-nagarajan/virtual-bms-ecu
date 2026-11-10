@@ -1,0 +1,29 @@
+name: Requirement
+description: A new or changed software requirement
+labels: [requirement]
+body:
+  - type: input
+    id: req_id
+    attributes:
+      label: Requirement ID
+      placeholder: REQ-XXX-000
+    validations:
+      required: true
+  - type: textarea
+    id: text
+    attributes:
+      label: Requirement text
+      description: Use "shall". One testable statement.
+    validations:
+      required: true
+  - type: dropdown
+    id: asil
+    attributes:
+      label: Safety classification
+      options: [QM, ASIL A, ASIL B, ASIL C, ASIL D]
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria / verification method
