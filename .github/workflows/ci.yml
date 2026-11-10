@@ -75,7 +75,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install tools
-        run: sudo apt-get update && sudo apt-get install -y libgtest-dev can-utils "linux-modules-extra-$(uname -r)"
+        run: |
+          sudo apt-get update && sudo apt-get install -y can-utils
+          # vcan ships in linux-modules-extra on some runner kernels; it is not
+          # packaged for every kernel, so only install it when it exists.
+          sudo apt-get install -y "linux-modules-extra-$(uname -r)" || echo "no modules-extra package for $(uname -r)"
       - name: Build
         run: cmake -S . -B build -DBMS_BUILD_TESTS=OFF && cmake --build build
       - name: Set up vcan0
