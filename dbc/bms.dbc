@@ -1,0 +1,68 @@
+VERSION "1.0"
+
+NS_ :
+
+BS_:
+
+BU_: BMS VCU CMC TESTER
+
+BO_ 256 VCU_Command: 8 VCU
+ SG_ VCU_CRC : 0|8@1+ (1,0) [0|255] "" BMS
+ SG_ VCU_AliveCounter : 8|4@1+ (1,0) [0|15] "" BMS
+ SG_ VCU_ContactorRequest : 12|2@1+ (1,0) [0|3] "" BMS
+ SG_ VCU_ChargeMode : 14|1@1+ (1,0) [0|1] "" BMS
+
+BO_ 512 CMC_CellVoltages_1: 8 CMC
+ SG_ CMC_Cell01_Voltage : 0|16@1+ (0.001,0) [0|65.535] "V" BMS
+ SG_ CMC_Cell02_Voltage : 16|16@1+ (0.001,0) [0|65.535] "V" BMS
+ SG_ CMC_Cell03_Voltage : 32|16@1+ (0.001,0) [0|65.535] "V" BMS
+ SG_ CMC_Cell04_Voltage : 48|16@1+ (0.001,0) [0|65.535] "V" BMS
+
+BO_ 513 CMC_CellVoltages_2: 8 CMC
+ SG_ CMC_Cell05_Voltage : 0|16@1+ (0.001,0) [0|65.535] "V" BMS
+ SG_ CMC_Cell06_Voltage : 16|16@1+ (0.001,0) [0|65.535] "V" BMS
+ SG_ CMC_Cell07_Voltage : 32|16@1+ (0.001,0) [0|65.535] "V" BMS
+ SG_ CMC_Cell08_Voltage : 48|16@1+ (0.001,0) [0|65.535] "V" BMS
+
+BO_ 514 CMC_CellVoltages_3: 8 CMC
+ SG_ CMC_Cell09_Voltage : 0|16@1+ (0.001,0) [0|65.535] "V" BMS
+ SG_ CMC_Cell10_Voltage : 16|16@1+ (0.001,0) [0|65.535] "V" BMS
+ SG_ CMC_Cell11_Voltage : 32|16@1+ (0.001,0) [0|65.535] "V" BMS
+ SG_ CMC_Cell12_Voltage : 48|16@1+ (0.001,0) [0|65.535] "V" BMS
+
+BO_ 528 CMC_Temperatures: 4 CMC
+ SG_ CMC_Temp1 : 0|8@1+ (1,-40) [-40|215] "degC" BMS
+ SG_ CMC_Temp2 : 8|8@1+ (1,-40) [-40|215] "degC" BMS
+ SG_ CMC_Temp3 : 16|8@1+ (1,-40) [-40|215] "degC" BMS
+ SG_ CMC_Temp4 : 24|8@1+ (1,-40) [-40|215] "degC" BMS
+
+BO_ 544 PackSensor: 4 CMC
+ SG_ PackCurrent : 0|16@1- (0.1,0) [-3276.8|3276.7] "A" BMS
+ SG_ PackVoltage : 16|16@1+ (0.01,0) [0|655.35] "V" BMS
+
+BO_ 768 BMS_Status: 8 BMS
+ SG_ BMS_CRC : 0|8@1+ (1,0) [0|255] "" VCU
+ SG_ BMS_AliveCounter : 8|4@1+ (1,0) [0|15] "" VCU
+ SG_ BMS_State : 12|4@1+ (1,0) [0|15] "" VCU
+ SG_ BMS_ContactorState : 16|3@1+ (1,0) [0|7] "" VCU
+ SG_ BMS_SOC : 24|8@1+ (0.5,0) [0|100] "%" VCU
+ SG_ BMS_FaultFlags : 32|16@1+ (1,0) [0|65535] "" VCU
+ SG_ BMS_MaxCellTemp : 48|8@1+ (1,-40) [-40|215] "degC" VCU
+
+BO_ 769 BMS_Limits: 4 BMS
+ SG_ BMS_MaxDischargeCurrent : 0|16@1+ (0.1,0) [0|6553.5] "A" VCU
+ SG_ BMS_MaxChargeCurrent : 16|16@1+ (0.1,0) [0|6553.5] "A" VCU
+
+BO_ 2016 Diag_Request: 8 TESTER
+ SG_ Diag_Request_Data : 0|64@1+ (1,0) [0|0] "" BMS
+
+BO_ 2024 Diag_Response: 8 BMS
+ SG_ Diag_Response_Data : 0|64@1+ (1,0) [0|0] "" TESTER
+
+CM_ BO_ 256 "Contactor command from VCU. E2E protected (CRC-8 J1850 over data ID 0x100 and bytes 1..7, alive counter).";
+CM_ BO_ 768 "BMS status. E2E protected like VCU_Command, data ID 0x300.";
+CM_ SG_ 256 VCU_ContactorRequest "0 = open, 1 = close, 2..3 = invalid";
+CM_ SG_ 768 BMS_FaultFlags "Bit 0 OV, 1 UV, 2 OT, 3 UT, 4 OC, 5 CMC timeout, 6 E2E VCU, 7 plausibility";
+VAL_ 768 BMS_State 0 "INIT" 1 "STANDBY" 2 "PRECHARGE" 3 "READY" 4 "FAULT" ;
+VAL_ 768 BMS_ContactorState 0 "OPEN" 1 "PRECHARGE" 2 "CLOSED" 3 "WELDED" ;
+VAL_ 256 VCU_ContactorRequest 0 "OPEN" 1 "CLOSE" ;
